@@ -20,6 +20,13 @@ type DbModel = { name: string; idFields: string[]; fields: DbField[] };
 type FormValue = string | number | boolean | undefined;
 type DbRow = Record<string, unknown>;
 type SelectItem = { label: string; value: string | number };
+type TableCategory = {
+  key: string;
+  label: string;
+  description: string;
+  icon: string;
+  models: DbModel[];
+};
 
 const toast = useToast();
 const models = ref<DbModel[]>([]);
@@ -37,6 +44,7 @@ const orderByJson = ref("{}");
 const take = ref(50);
 const skip = ref(0);
 const relationOptions = ref<Record<string, SelectItem[]>>({});
+const modelSearch = ref("");
 
 const selectedMeta = computed(() =>
   models.value.find((model) => model.name === selectedModel.value),
@@ -58,8 +66,92 @@ const tableFields = computed(() =>
     )
     .slice(0, 7),
 );
-const modelItems = computed(() =>
-  models.value.map((model) => ({ label: model.name, value: model.name })),
+const categoryDefinitions = [
+  {
+    key: "people",
+    label: "Personnes & licences",
+    description: "Licenciés, utilisateurs et rôles",
+    icon: "i-lucide-users",
+    matches: ["person", "user", "license", "role", "referent", "prospect", "volunteer"],
+  },
+  {
+    key: "competition",
+    label: "Compétitions",
+    description: "Compétitions et participants",
+    icon: "i-lucide-trophy",
+    matches: ["competition", "season", "game", "team"],
+  },
+  {
+    key: "practice",
+    label: "Pratique sportive",
+    description: "Séances, créneaux et sites",
+    icon: "i-lucide-map-pin",
+    matches: ["session", "slot", "practice", "format"],
+  },
+  {
+    key: "organizations",
+    label: "Organisations",
+    description: "Structures, contacts et territoires",
+    icon: "i-lucide-building-2",
+    matches: ["organization", "contact", "country", "department", "region", "municipalit"],
+  },
+  {
+    key: "content",
+    label: "Documents & projets",
+    description: "Documents et espaces de travail",
+    icon: "i-lucide-folder-kanban",
+    matches: ["document", "project", "consent"],
+  },
+  {
+    key: "system",
+    label: "Configuration & système",
+    description: "Paramètres, historiques et journaux",
+    icon: "i-lucide-settings-2",
+    matches: ["access", "log", "payment", "type", "status"],
+  },
+] as const;
+
+const categoryForModel = (model: DbModel) => {
+  const normalizedName = model.name.toLowerCase();
+  return (
+    categoryDefinitions.find((category) =>
+      category.matches.some((match) => normalizedName.includes(match)),
+    ) ?? {
+      key: "other",
+      label: "Autres tables",
+      description: "Tables complémentaires",
+      icon: "i-lucide-table-2",
+    }
+  );
+};
+
+const filteredModels = computed(() => {
+  const search = modelSearch.value.trim().toLowerCase();
+  if (!search) return models.value;
+  return models.value.filter((model) => model.name.toLowerCase().includes(search));
+});
+
+const modelCategories = computed<TableCategory[]>(() => {
+  const categories = new Map<string, TableCategory>();
+  for (const definition of categoryDefinitions) {
+    categories.set(definition.key, { ...definition, models: [] });
+  }
+  categories.set("other", {
+    key: "other",
+    label: "Autres tables",
+    description: "Tables complémentaires",
+    icon: "i-lucide-table-2",
+    models: [],
+  });
+  for (const model of filteredModels.value) {
+    const category = categoryForModel(model);
+    categories.get(category.key)?.models.push(model);
+  }
+  return [...categories.values()].filter((category) => category.models.length);
+});
+
+const selectedCategory = computed(() =>
+  selectedMeta.value ? categoryForModel(selectedMeta.value) : undefined,
 );
 const relationFields = computed(() =>
   writableFields.value.filter(
@@ -265,12 +357,49 @@ await Promise.all([loadRecords(), loadRelationOptions()]);
           label="Table / modèle"
           help="Les champs et relations sont déduits du schéma Prisma."
         >
-          <USelect
-            v-model="selectedModel"
-            :items="modelItems"
-            :loading="loadingModels"
-            class="w-fit sm:min-w-70"
-          />
+          <div class="relative">
+            <UInput
+              v-model="modelSearch"
+              icon="i-lucide-search"
+              placeholder="Rechercher une table..."
+              :loading="loadingModels"
+            />
+            <div class="mt-2 max-h-72 overflow-y-auto rounded-lg border border-default bg-default p-2 shadow-sm">
+              <div v-if="!modelCategories.length" class="px-3 py-6 text-center text-sm text-muted">
+                Aucune table trouvée.
+              </div>
+              <details
+                v-for="category in modelCategories"
+                :key="category.key"
+                open
+                class="group"
+              >
+                <summary class="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-elevated">
+                  <UIcon :name="category.icon" class="size-4 text-primary" />
+                  <span class="min-w-0 flex-1">
+                    <span class="block font-medium">{{ category.label }}</span>
+                    <span class="block text-xs text-muted">{{ category.description }}</span>
+                  </span>
+                  <UBadge color="neutral" variant="soft">{{ category.models.length }}</UBadge>
+                  <UIcon name="i-lucide-chevron-down" class="size-4 transition-transform group-open:rotate-180" />
+                </summary>
+                <div class="grid gap-1 pb-1 pt-1 sm:grid-cols-2">
+                  <button
+                    v-for="model in category.models"
+                    :key="model.name"
+                    type="button"
+                    class="flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-primary/10"
+                    :class="selectedModel === model.name ? 'bg-primary/10 font-semibold text-primary' : 'text-default'"
+                    @click="selectedModel = model.name"
+                  >
+                    <UIcon name="i-lucide-table-2" class="size-4 shrink-0" />
+                    <span class="truncate">{{ model.name }}</span>
+                    <UIcon v-if="selectedModel === model.name" name="i-lucide-check" class="ml-auto size-4 shrink-0" />
+                  </button>
+                </div>
+              </details>
+            </div>
+          </div>
         </UFormField>
         <UFormField label="Limite">
           <UInput v-model.number="take" type="number" min="1" max="200" />
@@ -316,13 +445,19 @@ await Promise.all([loadRecords(), loadRelationOptions()]);
     <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
       <UCard>
         <div class="mb-4 flex items-center justify-between">
-          <div>
-            <h2 class="font-semibold">
-              {{ selectedModel }}
-            </h2>
-            <p class="text-sm text-muted">
-              {{ records.length }} résultat(s) chargé(s)
-            </p>
+          <div class="flex min-w-0 items-center gap-3">
+            <div class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <UIcon :name="selectedCategory?.icon ?? 'i-lucide-table-2'" class="size-5" />
+            </div>
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <h2 class="truncate font-semibold">{{ selectedModel }}</h2>
+                <UBadge v-if="selectedCategory" color="primary" variant="soft">{{ selectedCategory.label }}</UBadge>
+              </div>
+              <p class="text-sm text-muted">
+                {{ records.length }} résultat(s) chargé(s) · {{ fields.length }} champ(s)
+              </p>
+            </div>
           </div>
           <UButton size="sm" icon="i-lucide-plus" @click="openCreate">
             Nouveau
