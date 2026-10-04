@@ -62,7 +62,9 @@ const modelItems = computed(() =>
   models.value.map((model) => ({ label: model.name, value: model.name })),
 );
 const relationFields = computed(() =>
-  writableFields.value.filter((field) => field.relationModel && field.relationToField),
+  writableFields.value.filter(
+    (field) => field.relationModel && field.relationToField,
+  ),
 );
 
 const display = (value: unknown) => {
@@ -282,8 +284,10 @@ await Promise.all([loadRecords(), loadRelationOptions()]);
             :loading="loadingRecords"
             @click="loadRecords"
           >
-            Charger </UButton
-          ><UButton
+            Charger
+          </UButton>
+
+          <UButton
             icon="i-lucide-refresh-cw"
             variant="soft"
             @click="loadModels"
