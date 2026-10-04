@@ -21,12 +21,10 @@ jobs:
           version: 11
 
       - name: Install dependencies
-        working-directory: ./frontend
         run: |
           pnpm install --frozen-lockfile
 
       - name: Build Nuxt frontend
-        working-directory: ./frontend
         run: |
           pnpm run build
         env:
