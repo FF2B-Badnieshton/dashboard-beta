@@ -7,6 +7,20 @@ const loading = ref(false)
 const errorMessage = ref('')
 const registered = computed(() => useRoute().query.registered === '1')
 
+const errorText = (error: unknown) => {
+  const response = error as {
+    data?: { statusMessage?: string, message?: string }
+    statusMessage?: string
+    message?: string
+  }
+
+  return response.data?.statusMessage
+    || response.data?.message
+    || response.statusMessage
+    || response.message
+    || 'Connexion impossible.'
+}
+
 const handleLogin = async () => {
   errorMessage.value = ''
   loading.value = true
@@ -22,7 +36,7 @@ const handleLogin = async () => {
 
     await navigateTo('/admin')
   } catch (error) {
-    errorMessage.value = (error as Error).message || 'Connexion impossible.'
+    errorMessage.value = errorText(error)
   } finally {
     loading.value = false
   }

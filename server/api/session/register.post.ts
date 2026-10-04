@@ -1,5 +1,6 @@
 import { prisma } from '../../utils/prisma'
 import { hashPassword } from '../../utils/password'
+import { throwSessionError } from '../../utils/session-errors'
 
 interface RegisterBody {
   first_name?: string
@@ -31,36 +32,49 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const existingUser = await prisma.users.findFirst({ where: { email } })
-  const existingPerson = await prisma.persons.findUnique({ where: { email } })
+  const runtimeConfig = useRuntimeConfig()
 
-  if (existingUser || existingPerson) {
+  if (!runtimeConfig.sessionPassword) {
     throw createError({
-      statusCode: 409,
-      statusMessage: 'Un compte existe déjà avec cet email.'
+      statusCode: 503,
+      statusMessage: 'Le service d’authentification est mal configuré. Contactez l’administrateur.'
     })
   }
 
-  await prisma.$transaction(async (tx) => {
-    const person = await tx.persons.create({
-      data: {
-        first_name: firstName,
-        last_name: lastName,
-        email,
-        phone_number: phoneNumber,
-        birthdate: new Date('2000-01-01'),
-        contact_origin: 'internet'
-      }
+  try {
+    const existingUser = await prisma.users.findFirst({ where: { email } })
+    const existingPerson = await prisma.persons.findUnique({ where: { email } })
+
+    if (existingUser || existingPerson) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Un compte existe déjà avec cet email.'
+      })
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const person = await tx.persons.create({
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          phone_number: phoneNumber,
+          birthdate: new Date('2000-01-01'),
+          contact_origin: 'internet'
+        }
+      })
+
+      await tx.users.create({
+        data: {
+          person_id: person.ff2b_id,
+          email,
+          password: hashPassword(password)
+        }
+      })
     })
 
-    await tx.users.create({
-      data: {
-        person_id: person.ff2b_id,
-        email,
-        password: hashPassword(password)
-      }
-    })
-  })
-
-  return { ok: true }
+    return { ok: true }
+  } catch (error) {
+    throwSessionError(error, 'register')
+  }
 })

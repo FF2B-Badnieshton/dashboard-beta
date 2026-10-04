@@ -10,6 +10,20 @@ const passwordConfirmation = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
 
+const errorText = (error: unknown) => {
+  const response = error as {
+    data?: { statusMessage?: string, message?: string }
+    statusMessage?: string
+    message?: string
+  }
+
+  return response.data?.statusMessage
+    || response.data?.message
+    || response.statusMessage
+    || response.message
+    || 'Inscription impossible.'
+}
+
 const handleRegister = async () => {
   errorMessage.value = ''
 
@@ -34,9 +48,7 @@ const handleRegister = async () => {
 
     await navigateTo({ path: '/admin/login', query: { registered: '1' } })
   } catch (error) {
-    errorMessage.value = (error as { data?: { message?: string }, message?: string }).data?.message
-      || (error as Error).message
-      || 'Inscription impossible.'
+    errorMessage.value = errorText(error)
   } finally {
     loading.value = false
   }
