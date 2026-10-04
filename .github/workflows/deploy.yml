@@ -50,7 +50,7 @@ jobs:
           port: 22
           source: ".output/*"
           target: "~/dashboard-test/.output"
-          strip_components: 2
+          strip_components: 1
 
       - name: Launch dashboard on preprod server
         uses: appleboy/ssh-action@v1
@@ -73,7 +73,7 @@ jobs:
             docker compose -f docker-compose.yml up --build -d --remove-orphans || { echo -e "${RED}❌ Erreur lors du démarrage du conteneur${NC}"; exit 1; }
             echo -e "${YELLOW}🧹 Nettoyage des images Docker inutilisées...${NC}"
             docker image prune -f || { echo -e "${RED}❌ Erreur lors du nettoyage${NC}"; exit 1; }
-            if docker ps | grep -q "portfolio"; then
+            if docker ps | grep -q "dashboard-test"; then
               echo -e "${GREEN}============================${NC}"
               echo -e "${GREEN}✨ Déploiement du dashboard terminé avec succès ! ✨${NC}"
               echo -e "${GREEN}============================${NC}"
