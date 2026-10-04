@@ -5,6 +5,7 @@ const email = ref('')
 const password = ref('')
 const loading = ref(false)
 const errorMessage = ref('')
+const registered = computed(() => useRoute().query.registered === '1')
 
 const handleLogin = async () => {
   errorMessage.value = ''
@@ -69,6 +70,13 @@ const handleLogin = async () => {
         </UFormField>
 
         <UAlert
+          v-if="registered"
+          color="success"
+          variant="soft"
+          title="Compte créé. Vous pouvez maintenant vous connecter."
+        />
+
+        <UAlert
           v-if="errorMessage"
           color="error"
           variant="soft"
@@ -82,6 +90,14 @@ const handleLogin = async () => {
         >
           Se connecter
         </UButton>
+
+        <p class="text-center text-sm text-muted">
+          Pas encore de compte ?
+          <NuxtLink
+            class="text-primary font-medium"
+            to="/admin/register"
+          >Créer un compte</NuxtLink>
+        </p>
       </UForm>
     </UCard>
   </div>

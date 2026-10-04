@@ -12,11 +12,14 @@ type DbField = {
   isUnique: boolean;
   hasDefaultValue: boolean;
   relationName: string | null;
+  relationModel: string | null;
+  relationToField: string | null;
   enumValues: string[] | null;
 };
 type DbModel = { name: string; idFields: string[]; fields: DbField[] };
 type FormValue = string | number | boolean | undefined;
 type DbRow = Record<string, unknown>;
+type SelectItem = { label: string; value: string | number };
 
 const toast = useToast();
 const models = ref<DbModel[]>([]);
@@ -33,6 +36,7 @@ const whereJson = ref("{}");
 const orderByJson = ref("{}");
 const take = ref(50);
 const skip = ref(0);
+const relationOptions = ref<Record<string, SelectItem[]>>({});
 
 const selectedMeta = computed(() =>
   models.value.find((model) => model.name === selectedModel.value),
@@ -56,6 +60,9 @@ const tableFields = computed(() =>
 );
 const modelItems = computed(() =>
   models.value.map((model) => ({ label: model.name, value: model.name })),
+);
+const relationFields = computed(() =>
+  writableFields.value.filter((field) => field.relationModel && field.relationToField),
 );
 
 const display = (value: unknown) => {
@@ -141,6 +148,26 @@ const loadRecords = async () => {
   }
 };
 
+const loadRelationOptions = async () => {
+  relationOptions.value = {};
+  if (!selectedModel.value || !relationFields.value.length) return;
+
+  try {
+    const entries = await Promise.all(
+      relationFields.value.map(async (field) => {
+        const response = await $fetch<{ options: SelectItem[] }>(
+          "/api/db/relation-options",
+          { query: { model: selectedModel.value, field: field.name } },
+        );
+        return [field.name, response.options] as const;
+      }),
+    );
+    relationOptions.value = Object.fromEntries(entries);
+  } catch (error) {
+    errorMessage.value = errorText(error);
+  }
+};
+
 const openCreate = () => {
   editing.value = false;
   editingWhere.value = {};
@@ -214,11 +241,11 @@ const remove = async (record: DbRow) => {
 
 watch(selectedModel, async () => {
   openCreate();
-  await loadRecords();
+  await Promise.all([loadRecords(), loadRelationOptions()]);
 });
 await loadModels();
 openCreate();
-await loadRecords();
+await Promise.all([loadRecords(), loadRelationOptions()]);
 </script>
 
 <template>
@@ -380,6 +407,14 @@ await loadRecords();
                 field.enumValues.map((value) => ({ label: value, value }))
               "
               :placeholder="field.isRequired ? 'Choisir' : 'Non défini'"
+            />
+            <USelect
+              v-else-if="field.relationModel"
+              v-model="values[field.name]"
+              :items="relationOptions[field.name] ?? []"
+              :loading="!relationOptions[field.name]"
+              :placeholder="field.isRequired ? 'Choisir' : 'Non défini'"
+              searchable
             />
             <USelect
               v-else-if="field.type === 'Boolean'"

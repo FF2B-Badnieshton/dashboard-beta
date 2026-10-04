@@ -4,7 +4,11 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
-    sessionPassword: process.env.NUXT_SESSION_PASSWORD || ''
+    // Keep compatibility with the existing local deployment variable while
+    // preferring the documented Nuxt runtime variable.
+    sessionPassword: process.env.NUXT_SESSION_PASSWORD
+      || process.env.DASHBOARD_PASSWORD
+      || ''
   },
   compatibilityDate: '2026-06-30',
   nitro: {
