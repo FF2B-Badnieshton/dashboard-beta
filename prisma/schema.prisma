@@ -8,11 +8,948 @@ datasource db {
 }
 
 model persons {
-  id         String   @id @db.Uuid
-  first_name String?
-  last_name  String?
-  email      String   @unique
-  role       String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  ff2b_id                                   String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  first_name                                String
+  last_name                                 String
+  birthdate                                 DateTime                  @db.Date
+  phone_number                              String
+  email                                     String                    @unique
+  status                                    String?                   @db.VarChar(40)
+  contact_origin                            contact_origin
+  address                                   String?                   @db.VarChar(255)
+  municipality_id                           Int?
+  creation_date                             DateTime?                 @default(now()) @db.Timestamptz(6)
+  commissions                               commissions[]
+  commissions_members                       commissions_members[]
+  competition_participant                   competition_participant[]
+  competitions                              competitions[]
+  consents                                  consents[]
+  contacts_contacts_person_idTopersons      contacts[]                @relation("contacts_person_idTopersons")
+  contacts_contacts_responsible_idTopersons contacts[]                @relation("contacts_responsible_idTopersons")
+  documents_persons                         documents_persons[]
+  game_participant                          game_participant[]
+  licenses                                  licenses[]
+  organizations_contact                     organizations_contact[]
+  payments                                  payments[]
+  person_role                               person_role[]
+  municipalities                            municipalities?           @relation(fields: [municipality_id], references: [id], onUpdate: NoAction)
+  projects_members                          projects_members[]
+  prospects                                 prospects[]
+  referents                                 referents[]
+  session_participants                      session_participants[]
+  sessions                                  sessions[]
+  team_members                              team_members[]
+  users                                     users?
+  volunteers_volunteers_manager_idTopersons volunteers[]              @relation("volunteers_manager_idTopersons")
+  volunteers_volunteers_person_idTopersons  volunteers[]              @relation("volunteers_person_idTopersons")
+
+  @@index([birthdate], map: "idx_persons_birthdate")
+  @@index([last_name], map: "idx_persons_last_name")
+  @@index([municipality_id], map: "idx_persons_municipality_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model access_roles {
+  id          Int           @id @default(autoincrement())
+  code        String        @unique
+  label       String        @unique
+  description String?
+  users_roles users_roles[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model commissions {
+  id                    Int                     @id @default(autoincrement())
+  name                  String
+  code                  String                  @unique
+  description           String?
+  president_id          String                  @db.Uuid
+  creation_date         DateTime                @db.Timestamptz(6)
+  persons               persons                 @relation(fields: [president_id], references: [ff2b_id], onUpdate: NoAction)
+  commissions_members   commissions_members[]
+  documents_commissions documents_commissions[]
+
+  @@index([name], map: "idx_commissions_name")
+  @@index([president_id], map: "idx_commissions_president_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model commissions_members {
+  commission_id Int
+  person_id     String      @db.Uuid
+  joined_at     DateTime    @db.Date
+  commissions   commissions @relation(fields: [commission_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  persons       persons     @relation(fields: [person_id], references: [ff2b_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([commission_id, person_id], map: "commissions_members_unique_0")
+  @@index([person_id], map: "idx_commissions_members_person_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model competition_format {
+  id           Int            @id @default(autoincrement()) @db.SmallInt
+  code         String         @unique
+  label        String         @unique
+  competitions competitions[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model competition_participant {
+  id                               Int                              @id @default(autoincrement())
+  competition_id                   Int
+  person_id                        String                           @db.Uuid
+  status                           Int
+  category                         Int
+  license_id                       String                           @db.Uuid
+  ranking_before                   Int?                             @db.SmallInt
+  ranking_after                    Int?                             @db.SmallInt
+  competition_participant_category competition_participant_category @relation(fields: [category], references: [id], onUpdate: NoAction)
+  competitions                     competitions                     @relation(fields: [competition_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  licenses                         licenses                         @relation(fields: [license_id], references: [id], onUpdate: NoAction)
+  persons                          persons                          @relation(fields: [person_id], references: [ff2b_id], onUpdate: NoAction)
+  competition_participant_status   competition_participant_status   @relation(fields: [status], references: [id], onUpdate: NoAction)
+
+  @@index([category], map: "idx_competition_participant_category")
+  @@index([competition_id], map: "idx_competition_participant_competition_id")
+  @@index([competition_id, person_id], map: "idx_competition_participant_competition_person")
+  @@index([license_id], map: "idx_competition_participant_license_id")
+  @@index([person_id], map: "idx_competition_participant_person_id")
+  @@index([status], map: "idx_competition_participant_status")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model competition_participant_category {
+  id                      Int                       @id @default(autoincrement())
+  code                    String                    @unique
+  label                   String                    @unique
+  competition_participant competition_participant[]
+
+  @@unique([code, label], map: "competition_participant_category_unique_0")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model competition_participant_status {
+  id                      Int                       @id @default(autoincrement())
+  code                    String                    @unique
+  label                   String                    @unique
+  competition_participant competition_participant[]
+
+  @@unique([code, label], map: "competition_participant_status_unique_0")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model competition_status {
+  id           Int            @id @default(autoincrement())
+  code         String         @unique
+  label        String         @unique
+  competitions competitions[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model competitions {
+  id                      Int                       @id @default(autoincrement())
+  season_id               Int
+  date                    DateTime                  @db.Date
+  location_id             Int
+  practice_site_id        Int
+  organizer_id            String                    @db.Uuid
+  format_id               Int                       @db.SmallInt
+  status                  Int?
+  rules_document_id       String?                   @db.Uuid
+  competition_participant competition_participant[]
+  competition_format      competition_format        @relation(fields: [format_id], references: [id], onUpdate: NoAction)
+  municipalities          municipalities            @relation(fields: [location_id], references: [id], onUpdate: NoAction)
+  persons                 persons                   @relation(fields: [organizer_id], references: [ff2b_id], onUpdate: NoAction)
+  practice_site           practice_site             @relation(fields: [practice_site_id], references: [id], onUpdate: NoAction)
+  documents               documents?                @relation(fields: [rules_document_id], references: [id], onUpdate: NoAction)
+  seasons                 seasons                   @relation(fields: [season_id], references: [id], onUpdate: NoAction)
+  competition_status      competition_status?       @relation(fields: [status], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  documents_competitions  documents_competitions[]
+  games                   games[]
+  team                    team[]
+
+  @@index([date], map: "idx_competitions_date")
+  @@index([format_id], map: "idx_competitions_format_id")
+  @@index([location_id], map: "idx_competitions_location_id")
+  @@index([organizer_id], map: "idx_competitions_organizer_id")
+  @@index([practice_site_id], map: "idx_competitions_practice_site_id")
+  @@index([rules_document_id], map: "idx_competitions_rules_document_id")
+  @@index([season_id, date], map: "idx_competitions_season_date")
+  @@index([season_id], map: "idx_competitions_season_id")
+  @@index([status], map: "idx_competitions_status")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model consents {
+  id              Int           @id @default(autoincrement())
+  person_id       String        @db.Uuid
+  consent_type_id Int
+  given_at        DateTime      @default(now()) @db.Timestamptz(6)
+  is_accepted     Boolean
+  consents_type   consents_type @relation(fields: [consent_type_id], references: [id], onUpdate: NoAction)
+  persons         persons       @relation(fields: [person_id], references: [ff2b_id], onUpdate: NoAction)
+
+  @@index([consent_type_id], map: "idx_consents_consent_type_id")
+  @@index([given_at], map: "idx_consents_given_at")
+  @@index([person_id], map: "idx_consents_person_id")
+  @@index([person_id, consent_type_id], map: "idx_consents_person_type")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model consents_type {
+  id           Int        @id @default(autoincrement())
+  code         String     @unique
+  label        String
+  description  String?
+  is_mandatory Boolean
+  consents     consents[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model contacts {
+  id                                       Int            @id @default(autoincrement())
+  person_id                                String?        @db.Uuid
+  organization_id                          Int?
+  contact_at                               DateTime?      @db.Timestamptz(6)
+  responsible_id                           String         @db.Uuid
+  subject                                  String?
+  notes                                    String?
+  organizations                            organizations? @relation(fields: [organization_id], references: [id], onUpdate: NoAction)
+  persons_contacts_person_idTopersons      persons?       @relation("contacts_person_idTopersons", fields: [person_id], references: [ff2b_id], onDelete: Restrict, onUpdate: NoAction)
+  persons_contacts_responsible_idTopersons persons        @relation("contacts_responsible_idTopersons", fields: [responsible_id], references: [ff2b_id], onUpdate: NoAction)
+
+  @@index([contact_at], map: "idx_contacts_date")
+  @@index([organization_id], map: "idx_contacts_organization_id")
+  @@index([person_id], map: "idx_contacts_person_id")
+  @@index([responsible_id, contact_at], map: "idx_contacts_responsible_date")
+  @@index([responsible_id], map: "idx_contacts_responsible_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model countries {
+  id      Int       @id @default(autoincrement())
+  name    String
+  code    String
+  regions regions[]
+
+  @@index([code], map: "idx_countries_code")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model departments {
+  id             Int              @id @default(autoincrement())
+  name           String
+  code           String
+  region_id      Int
+  regions        regions          @relation(fields: [region_id], references: [id], onUpdate: NoAction)
+  municipalities municipalities[]
+
+  @@index([code], map: "idx_departments_code")
+  @@index([region_id], map: "idx_departments_region_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model document_type {
+  id             Int         @id @default(autoincrement()) @db.SmallInt
+  document_code  String      @unique
+  document_label String
+  documents      documents[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model documents {
+  id                        String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  filename                  String
+  storage_path              String
+  document_type_id          Int                         @db.SmallInt
+  creation_date             DateTime                    @default(now()) @db.Timestamptz(6)
+  mime_type                 String?                     @db.VarChar(40)
+  file_size                 Int
+  hash                      String                      @db.VarChar(64)
+  uploaded_by               String?                     @db.Uuid
+  expires_at                DateTime?                   @db.Timestamptz(6)
+  competitions              competitions[]
+  document_type             document_type               @relation(fields: [document_type_id], references: [id], onUpdate: NoAction)
+  users                     users?                      @relation(fields: [uploaded_by], references: [id], onUpdate: NoAction)
+  documents_commissions     documents_commissions[]
+  documents_competitions    documents_competitions[]
+  documents_licenses        documents_licenses[]
+  documents_organizations   documents_organizations[]
+  documents_persons         documents_persons[]
+  documents_practices_sites documents_practices_sites[]
+  documents_projects        documents_projects[]
+  licenses                  licenses[]
+  payments                  payments[]
+
+  @@index([creation_date], map: "idx_documents_creation_date")
+  @@index([document_type_id], map: "idx_documents_document_type_id")
+  @@index([expires_at], map: "idx_documents_expires_at")
+  @@index([hash], map: "idx_documents_hash")
+  @@index([uploaded_by], map: "idx_documents_uploaded_by")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model documents_commissions {
+  document_id   String      @db.Uuid
+  commission_id Int
+  commissions   commissions @relation(fields: [commission_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  documents     documents   @relation(fields: [document_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([document_id, commission_id], map: "documents_commissions_unique_0")
+  @@index([commission_id], map: "idx_documents_commissions_commission_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model documents_competitions {
+  document_id    String       @db.Uuid
+  competition_id Int
+  competitions   competitions @relation(fields: [competition_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  documents      documents    @relation(fields: [document_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([document_id, competition_id], map: "documents_competitions_unique_0")
+  @@index([competition_id], map: "idx_documents_competitions_competition_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model documents_licenses {
+  document_id String    @db.Uuid
+  license_id  String    @db.Uuid
+  documents   documents @relation(fields: [document_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  licenses    licenses  @relation(fields: [license_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([document_id, license_id], map: "documents_licenses_unique_0")
+  @@index([license_id], map: "idx_documents_licenses_license_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model documents_organizations {
+  document_id     String        @db.Uuid
+  organization_id Int
+  documents       documents     @relation(fields: [document_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  organizations   organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([document_id, organization_id], map: "documents_organizations_unique_0")
+  @@index([organization_id], map: "idx_documents_organizations_organization_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model documents_persons {
+  document_id String    @db.Uuid
+  person_id   String    @db.Uuid
+  documents   documents @relation(fields: [document_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  persons     persons   @relation(fields: [person_id], references: [ff2b_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([document_id, person_id], map: "documents_persons_unique_0")
+  @@index([person_id], map: "idx_documents_persons_person_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model documents_practices_sites {
+  document_id      String        @db.Uuid
+  practice_site_id Int
+  documents        documents     @relation(fields: [document_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  practice_site    practice_site @relation(fields: [practice_site_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([document_id, practice_site_id], map: "documents_practices_sites_unique_0")
+  @@index([practice_site_id], map: "idx_documents_practices_sites_practice_site_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model documents_projects {
+  document_id String    @db.Uuid
+  project_id  Int
+  documents   documents @relation(fields: [document_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  projects    projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([document_id, project_id], map: "documents_projects_unique_0")
+  @@index([project_id], map: "idx_documents_projects_project_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model game_format {
+  id    Int     @id @default(autoincrement()) @db.SmallInt
+  code  String  @unique
+  label String  @unique
+  games games[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model game_participant {
+  id             Int       @id @default(autoincrement())
+  game_side_id   Int
+  ranking_before Int       @db.SmallInt
+  ranking_after  Int?      @db.SmallInt
+  elo_before     Int?      @db.SmallInt
+  elo_after      Int?      @db.SmallInt
+  person_id      String    @db.Uuid
+  game_side      game_side @relation(fields: [game_side_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  persons        persons   @relation(fields: [person_id], references: [ff2b_id], onUpdate: NoAction)
+
+  @@index([game_side_id], map: "idx_game_participant_game_side_id")
+  @@index([person_id], map: "idx_game_participant_person_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model game_side {
+  id               Int                @id @default(autoincrement())
+  game_id          Int
+  side_number      Int                @db.SmallInt
+  game_participant game_participant[]
+  games            games              @relation(fields: [game_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  game_side_result game_side_result?
+
+  @@unique([game_id, side_number], map: "game_side_unique_0")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model game_side_result {
+  id              Int       @id @default(autoincrement())
+  game_side_id    Int       @unique
+  nieshs_scored   Int       @db.SmallInt
+  nieshs_conceded Int       @db.SmallInt
+  result          Int       @db.SmallInt
+  game_side       game_side @relation(fields: [game_side_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model games {
+  id             Int           @id @default(autoincrement())
+  competition_id Int?
+  format_id      Int           @db.SmallInt
+  date           DateTime      @db.Timestamptz(6)
+  game_side      game_side[]
+  competitions   competitions? @relation(fields: [competition_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  game_format    game_format   @relation(fields: [format_id], references: [id], onUpdate: NoAction)
+
+  @@index([competition_id, date], map: "idx_games_competition_date")
+  @@index([competition_id], map: "idx_games_competition_id")
+  @@index([date], map: "idx_games_date")
+  @@index([format_id], map: "idx_games_format_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model license_type {
+  id                                           Int        @id @default(autoincrement())
+  license_code                                 String     @unique
+  license_label                                String     @unique
+  description                                  String?
+  licenses_licenses_license_typeTolicense_type licenses[] @relation("licenses_license_typeTolicense_type")
+
+  @@unique([license_code, license_label], map: "license_type_unique_0")
+  @@index([license_code], map: "idx_license_type_license_code")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model licenses {
+  id                                               String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  license_type                                     Int
+  person_id                                        String                    @db.Uuid
+  season_id                                        Int
+  request_date                                     DateTime                  @db.Date
+  validation_date                                  DateTime?                 @db.Date
+  beginning_date                                   DateTime?                 @db.Date
+  end_date                                         DateTime?                 @db.Date
+  license_status                                   licence_status
+  document_id                                      String?                   @db.Uuid
+  competition_participant                          competition_participant[]
+  documents_licenses                               documents_licenses[]
+  documents                                        documents?                @relation(fields: [document_id], references: [id], onUpdate: NoAction)
+  license_type_licenses_license_typeTolicense_type license_type              @relation("licenses_license_typeTolicense_type", fields: [license_type], references: [id], onUpdate: NoAction)
+  persons                                          persons                   @relation(fields: [person_id], references: [ff2b_id], onUpdate: NoAction)
+  seasons                                          seasons                   @relation(fields: [season_id], references: [id], onUpdate: NoAction)
+  payments                                         payments[]
+  session_participants                             session_participants[]
+
+  @@index([document_id], map: "idx_licenses_document_id")
+  @@index([end_date], map: "idx_licenses_end_date")
+  @@index([license_status], map: "idx_licenses_license_status")
+  @@index([license_type], map: "idx_licenses_license_type")
+  @@index([person_id], map: "idx_licenses_person_id")
+  @@index([person_id, season_id], map: "idx_licenses_person_season")
+  @@index([request_date], map: "idx_licenses_request_date")
+  @@index([season_id], map: "idx_licenses_season")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model logs {
+  id         BigInt   @id @default(autoincrement())
+  changed_at DateTime @default(now()) @db.Timestamptz(6)
+  user_id    String?  @db.Uuid
+  action     String   @db.VarChar(10)
+  table_name String   @db.VarChar(100)
+  old_data   Json?
+  new_data   Json?
+  users      users?   @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "logs_user_fk")
+
+  @@index([action], map: "idx_logs_action")
+  @@index([new_data], map: "idx_logs_new_data_gin", type: Gin)
+  @@index([old_data], map: "idx_logs_old_data_gin", type: Gin)
+  @@index([table_name, changed_at(sort: Desc)], map: "idx_logs_table_changed_at")
+  @@index([user_id, changed_at(sort: Desc)], map: "idx_logs_user_changed_at")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model municipalities {
+  id                 Int             @id @default(autoincrement())
+  name               String
+  zip_code           String
+  insee_code         String?         @db.VarChar(10)
+  departement_id     Int
+  development_status String
+  competitions       competitions[]
+  departments        departments     @relation(fields: [departement_id], references: [id], onUpdate: NoAction)
+  organizations      organizations[]
+  persons            persons[]
+  practice_site      practice_site[]
+  volunteers         volunteers[]
+
+  @@index([departement_id], map: "idx_municipalities_departements_id")
+  @@index([insee_code], map: "idx_municipalities_insee_code")
+  @@index([name], map: "idx_municipalities_name")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model organizations {
+  id                      Int                       @id @default(autoincrement())
+  name                    String
+  organization_type_id    Int                       @db.SmallInt
+  municipality_id         Int?
+  contacts                contacts[]
+  documents_organizations documents_organizations[]
+  municipalities          municipalities?           @relation(fields: [municipality_id], references: [id], onUpdate: NoAction)
+  organizations_type      organizations_type        @relation(fields: [organization_type_id], references: [id], onUpdate: NoAction)
+  organizations_contact   organizations_contact[]
+  prospects               prospects[]
+
+  @@index([municipality_id], map: "idx_organizations_municipality_id")
+  @@index([name], map: "idx_organizations_name")
+  @@index([organization_type_id], map: "idx_organizations_organization_type_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model organizations_contact {
+  id              Int           @id @default(autoincrement())
+  organization_id Int
+  person_id       String        @db.Uuid
+  function        String?
+  start_date      DateTime?     @db.Date
+  end_date        DateTime?     @db.Date
+  organizations   organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  persons         persons       @relation(fields: [person_id], references: [ff2b_id], onUpdate: NoAction)
+
+  @@index([organization_id], map: "idx_organizations_contact_organization_id")
+  @@index([person_id], map: "idx_organizations_contact_person_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model organizations_type {
+  id            Int             @id @default(autoincrement()) @db.SmallInt
+  code          String
+  label         String
+  organizations organizations[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model payments {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  person_id             String             @db.Uuid
+  license_id            String             @db.Uuid
+  amount                Decimal            @db.Decimal(8, 2)
+  currency              String             @db.VarChar(3)
+  payment_method        payments_method
+  payment_status        payments_status
+  payment_date          DateTime           @db.Timestamptz(6)
+  transaction_reference String             @unique
+  invoice_document      String?            @db.Uuid
+  notes                 String?
+  created_at            DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime?          @db.Timestamptz(6)
+  documents             documents?         @relation(fields: [invoice_document], references: [id], onUpdate: NoAction)
+  licenses              licenses           @relation(fields: [license_id], references: [id], onUpdate: NoAction)
+  persons               persons            @relation(fields: [person_id], references: [ff2b_id], onUpdate: NoAction)
+  payments_history      payments_history[]
+
+  @@index([license_id, payment_date], map: "idx_payments_license_date")
+  @@index([license_id], map: "idx_payments_license_id")
+  @@index([payment_date], map: "idx_payments_payment_date")
+  @@index([payment_status], map: "idx_payments_payment_status")
+  @@index([person_id, payment_date], map: "idx_payments_person_date")
+  @@index([person_id], map: "idx_payments_person_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model payments_history {
+  id              Int             @id @default(autoincrement())
+  payment_id      String          @db.Uuid
+  previous_status payments_status
+  new_status      payments_status
+  changed_by      String?         @db.Uuid
+  changed_at      DateTime        @default(now()) @db.Timestamptz(6)
+  reason          String?
+  users           users?          @relation(fields: [changed_by], references: [id], onUpdate: NoAction)
+  payments        payments        @relation(fields: [payment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([changed_at], map: "idx_payments_history_changed_at")
+  @@index([changed_by], map: "idx_payments_history_changed_by")
+  @@index([payment_id, changed_at], map: "idx_payments_history_payment_changed_at")
+  @@index([payment_id], map: "idx_payments_history_payment_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model person_role {
+  id        Int     @id @default(autoincrement())
+  role_id   Int     @db.SmallInt
+  person_id String  @db.Uuid
+  persons   persons @relation(fields: [person_id], references: [ff2b_id], onDelete: Cascade, onUpdate: NoAction)
+  roles     roles   @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([role_id, person_id], map: "person_role_unique_0")
+  @@index([person_id], map: "idx_person_role_person_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model practice_site {
+  id                        Int                         @id @default(autoincrement())
+  name                      String
+  municipality_id           Int
+  address                   String?
+  opening_date              DateTime?                   @db.Date
+  closing_date              DateTime?                   @db.Date
+  competitions              competitions[]
+  documents_practices_sites documents_practices_sites[]
+  municipalities            municipalities              @relation(fields: [municipality_id], references: [id], onUpdate: NoAction)
+  referents                 referents[]
+  slots                     slots[]
+
+  @@index([municipality_id], map: "idx_practice_site_municipality_id")
+  @@index([name], map: "idx_practice_site_name")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model project_members_role {
+  id               Int                @id @default(autoincrement())
+  code             String             @unique
+  label            String             @unique
+  projects_members projects_members[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model projects {
+  id                 Int                  @id @default(autoincrement())
+  name               String
+  description        String?
+  status             Int                  @db.SmallInt
+  start_date         DateTime             @db.Date
+  end_date           DateTime?            @db.Date
+  documents_projects documents_projects[]
+  projects_status    projects_status      @relation(fields: [status], references: [id], onUpdate: NoAction)
+  projects_members   projects_members[]
+
+  @@index([end_date], map: "idx_projects_end_date")
+  @@index([start_date], map: "idx_projects_start_date")
+  @@index([status], map: "idx_projects_status")
+  @@index([status, start_date], map: "idx_projects_status_start_date")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model projects_members {
+  project_id           Int
+  person_id            String               @db.Uuid
+  project_role         Int
+  joined_at            DateTime?            @db.Date
+  persons              persons              @relation(fields: [person_id], references: [ff2b_id], onDelete: Cascade, onUpdate: NoAction)
+  projects             projects             @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  project_members_role project_members_role @relation(fields: [project_role], references: [id], onUpdate: NoAction)
+
+  @@id([project_id, person_id], map: "projects_members_unique_0")
+  @@index([person_id], map: "idx_projects_members_person_id")
+  @@index([project_role], map: "idx_projects_members_project_role")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model projects_status {
+  id       Int        @id @default(autoincrement()) @db.SmallInt
+  code     String     @unique
+  label    String     @unique
+  projects projects[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model prospects {
+  id              Int            @id @default(autoincrement())
+  person_id       String?        @db.Uuid
+  organization_id Int?
+  type            String?
+  status          String?
+  interest        String?
+  organizations   organizations? @relation(fields: [organization_id], references: [id], onUpdate: NoAction)
+  persons         persons?       @relation(fields: [person_id], references: [ff2b_id], onUpdate: NoAction)
+
+  @@index([organization_id], map: "idx_prospects_organization_id")
+  @@index([person_id], map: "idx_prospects_person_id")
+  @@index([status], map: "idx_prospects_status")
+  @@index([type], map: "idx_prospects_type")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model referent_status {
+  id        Int         @id @default(autoincrement())
+  code      String
+  label     String
+  referents referents[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model referents {
+  id                 Int              @id @default(autoincrement())
+  person_id          String           @db.Uuid
+  site_id            Int
+  start_date         DateTime         @db.Date
+  end_date           DateTime?        @db.Date
+  professional_phone String
+  professional_mail  String
+  status             Int?
+  persons            persons          @relation(fields: [person_id], references: [ff2b_id], onUpdate: NoAction)
+  practice_site      practice_site    @relation(fields: [site_id], references: [id], onUpdate: NoAction)
+  referent_status    referent_status? @relation(fields: [status], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sessions           sessions[]
+
+  @@index([person_id], map: "idx_referents_person_id")
+  @@index([site_id], map: "idx_referents_site_id")
+  @@index([site_id, start_date], map: "idx_referents_site_start_date")
+  @@index([status], map: "idx_referents_status")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model regions {
+  id          Int           @id @default(autoincrement())
+  name        String
+  code        String?
+  country_id  Int
+  departments departments[]
+  countries   countries     @relation(fields: [country_id], references: [id], onUpdate: NoAction)
+
+  @@index([code], map: "idx_regions_code")
+  @@index([country_id], map: "idx_regions_country_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model roles {
+  id          Int           @id @default(autoincrement()) @db.SmallInt
+  code        String        @unique
+  label       String        @unique
+  description String?
+  person_role person_role[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model seasons {
+  id           Int            @id @default(autoincrement())
+  start_year   Int            @db.SmallInt
+  end_year     Int            @db.SmallInt
+  competitions competitions[]
+  licenses     licenses[]
+  slots        slots[]
+
+  @@unique([start_year, end_year], map: "seasons_unique_0")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model session_participants {
+  id         Int      @id @default(autoincrement())
+  person_id  String   @db.Uuid
+  session_id Int
+  license_id String   @db.Uuid
+  presence   Boolean?
+  licenses   licenses @relation(fields: [license_id], references: [id], onUpdate: NoAction)
+  persons    persons  @relation(fields: [person_id], references: [ff2b_id], onDelete: Cascade, onUpdate: NoAction)
+  sessions   sessions @relation(fields: [session_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([person_id, session_id], map: "session_participants_unique_0")
+  @@index([license_id], map: "idx_session_participants_license_id")
+  @@index([session_id], map: "idx_session_participants_session_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sessions {
+  id                   Int                    @id @default(autoincrement())
+  slot_id              Int
+  start_at             DateTime               @default(now()) @db.Timestamptz(6)
+  duration             Int                    @db.SmallInt
+  referent_id          Int?
+  coach_id             String?                @db.Uuid
+  content              String?
+  status               seance_status?
+  session_participants session_participants[]
+  persons              persons?               @relation(fields: [coach_id], references: [ff2b_id], onUpdate: NoAction)
+  referents            referents?             @relation(fields: [referent_id], references: [id], onUpdate: NoAction)
+  slots                slots                  @relation(fields: [slot_id], references: [id], onUpdate: NoAction)
+
+  @@index([coach_id], map: "idx_sessions_coach_id")
+  @@index([referent_id], map: "idx_sessions_referent_id")
+  @@index([slot_id], map: "idx_sessions_slot_id")
+  @@index([slot_id, start_at], map: "idx_sessions_slot_start_time")
+  @@index([start_at], map: "idx_sessions_start_time")
+  @@index([status], map: "idx_sessions_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model slots {
+  id            Int           @id @default(autoincrement())
+  site_id       Int
+  season_id     Int
+  start_at      DateTime      @db.Time(6)
+  end_at        DateTime      @db.Time(6)
+  capacity      Int?          @db.SmallInt
+  day_of_week   Int?          @db.SmallInt
+  sessions      sessions[]
+  seasons       seasons       @relation(fields: [season_id], references: [id], onUpdate: NoAction)
+  practice_site practice_site @relation(fields: [site_id], references: [id], onUpdate: NoAction)
+
+  @@unique([site_id, season_id, day_of_week, start_at, end_at], map: "slots_unique_0")
+  @@index([day_of_week], map: "idx_slots_day_of_week")
+  @@index([season_id], map: "idx_slots_season_id")
+  @@index([site_id], map: "idx_slots_site_id")
+  @@index([site_id, season_id], map: "idx_slots_site_season")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model team {
+  id             Int            @id @default(autoincrement())
+  competition_id Int
+  name           String
+  competitions   competitions   @relation(fields: [competition_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  team_members   team_members[]
+
+  @@unique([competition_id, name], map: "team_unique_0")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model team_members {
+  team_id   Int
+  person_id String  @db.Uuid
+  persons   persons @relation(fields: [person_id], references: [ff2b_id], onDelete: Cascade, onUpdate: NoAction)
+  team      team    @relation(fields: [team_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([team_id, person_id], map: "team_members_unique_0")
+  @@index([person_id], map: "idx_team_members_person_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model users {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  person_id        String             @unique @db.Uuid
+  email            String
+  password         String
+  statut           Int?               @db.SmallInt
+  creation_date    DateTime           @default(now()) @db.Timestamptz(6)
+  documents        documents[]
+  logs             logs[]
+  payments_history payments_history[]
+  persons          persons            @relation(fields: [person_id], references: [ff2b_id], onUpdate: NoAction)
+  users_status     users_status?      @relation(fields: [statut], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  users_roles      users_roles[]
+
+  @@index([email], map: "idx_users_email")
+  @@index([person_id], map: "idx_users_person_id")
+  @@index([statut], map: "idx_users_statut")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model users_roles {
+  role_id      Int
+  user_id      String       @db.Uuid
+  access_roles access_roles @relation(fields: [role_id], references: [id], onUpdate: NoAction)
+  users        users        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([role_id, user_id], map: "users_roles_unique_0")
+  @@index([user_id], map: "idx_users_roles_user_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model users_status {
+  id    Int     @id @default(autoincrement())
+  code  String  @unique
+  label String  @unique
+  users users[]
+
+  @@unique([code, label], map: "users_status_unique_0")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model volunteers {
+  id                                     Int            @id @default(autoincrement())
+  person_id                              String         @db.Uuid
+  manager_id                             String         @db.Uuid
+  mission                                String?
+  skills                                 String?
+  availability                           String?
+  location                               Int
+  application_date                       DateTime?      @db.Date
+  observations                           String?
+  start_date                             DateTime       @db.Date
+  end_date                               DateTime?      @db.Date
+  tasks                                  String?
+  municipalities                         municipalities @relation(fields: [location], references: [id], onUpdate: NoAction)
+  persons_volunteers_manager_idTopersons persons        @relation("volunteers_manager_idTopersons", fields: [manager_id], references: [ff2b_id], onUpdate: NoAction)
+  persons_volunteers_person_idTopersons  persons        @relation("volunteers_person_idTopersons", fields: [person_id], references: [ff2b_id], onUpdate: NoAction)
+
+  @@index([end_date], map: "idx_volunteers_end_date")
+  @@index([location], map: "idx_volunteers_location")
+  @@index([manager_id], map: "idx_volunteers_manager_id")
+  @@index([person_id], map: "idx_volunteers_person_id")
+  @@index([start_date], map: "idx_volunteers_start_date")
+}
+
+enum contact_origin {
+  internet
+  IA
+  t_l_phone @map("téléphone")
+  email
+}
+
+enum licence_status {
+  brouillon
+  demand_e   @map("demandée")
+  en_attente @map("en attente")
+  valid_e    @map("validée")
+  suspendue
+  expir_e    @map("expirée")
+  annul_e    @map("annulée")
+}
+
+enum payments_method {
+  carte_bancaire
+  virement
+  cheque
+  especes
+  pass_sport
+  autre
+}
+
+enum payments_status {
+  en_attente
+  valide
+  echoue
+  rembourse
+  annule
+}
+
+enum seance_status {
+  annul_   @map("annulé")
+  report_  @map("reporté")
+  termin_  @map("terminé")
+  en_cours @map("en cours")
+  planifi_ @map("planifié")
 }

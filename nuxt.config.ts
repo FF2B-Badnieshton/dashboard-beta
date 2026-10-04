@@ -4,8 +4,7 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
-    sessionPassword: process.env.NUXT_SESSION_PASSWORD || '',
-    dashboardPassword: process.env.DASHBOARD_PASSWORD || ''
+    sessionPassword: process.env.NUXT_SESSION_PASSWORD || ''
   },
   compatibilityDate: '2026-06-30',
   nitro: {

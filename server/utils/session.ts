@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
-interface SessionUser {
+export interface SessionUser {
   id: string
   email: string
   role: string
@@ -9,7 +9,8 @@ interface SessionUser {
 }
 
 const encode = (value: string) => Buffer.from(value).toString('base64url')
-const decode = (value: string) => Buffer.from(value, 'base64url').toString('utf-8')
+const decode = (value: string) =>
+  Buffer.from(value, 'base64url').toString('utf-8')
 
 const sign = (payload: string, secret: string) => {
   return createHmac('sha256', secret).update(payload).digest('base64url')

@@ -16,5 +16,7 @@
 
 - `/admin` : vue synthétique de pilotage
 - `/admin/licencies` : liste des membres avec `UTable`
+- `/admin/database` : console CRUD complète pour tous les modèles Prisma
+- `/admin/users` : gestion des comptes utilisateurs et des rôles
 - `/admin/sites` : module de gestion des sites
 - `/admin/referents` : module de gestion des référents
