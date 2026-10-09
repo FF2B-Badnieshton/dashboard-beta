@@ -1,17 +1,18 @@
 <script setup lang="ts">
 const navigation = [
-  { label: 'Tableau de bord', to: '/admin', icon: 'i-lucide-layout-dashboard' },
+  { label: "Tableau de bord", to: "/admin", icon: "i-lucide-layout-dashboard" },
   {
-    label: 'Base de données',
-    to: '/admin/database',
-    icon: 'i-lucide-database'
+    label: "Base de données",
+    to: "/admin/database",
+    icon: "i-lucide-database",
   },
-  { label: 'Licenciés', to: '/admin/licencies', icon: 'i-lucide-users' },
-  { label: 'Paiements', to: '/admin/payments', icon: 'i-lucide-credit-card' },
-  { label: 'Utilisateurs', to: '/admin/users', icon: 'i-lucide-user-cog' },
-  { label: 'Sites de pratique', to: '/admin/sites', icon: 'i-lucide-map-pin' },
-  { label: 'Référents', to: '/admin/referents', icon: 'i-lucide-shield-check' }
-]
+  { label: "Licenciés", to: "/admin/licencies", icon: "i-lucide-users" },
+  { label: "Paiements", to: "/admin/payments", icon: "i-lucide-credit-card" },
+  { label: "Utilisateurs", to: "/admin/users", icon: "i-lucide-user-cog" },
+  { label: "Sites de pratique", to: "/admin/sites", icon: "i-lucide-map-pin" },
+  { label: "Référents", to: "/admin/referents", icon: "i-lucide-shield-check" },
+  { label: "Géographie", to: "/admin/geography", icon: "i-lucide-map-pin" },
+];
 </script>
 
 <template>
