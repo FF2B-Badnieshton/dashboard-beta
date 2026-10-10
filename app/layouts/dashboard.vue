@@ -12,6 +12,7 @@ const navigation = [
   { label: "Sites de pratique", to: "/admin/sites", icon: "i-lucide-map-pin" },
   { label: "Référents", to: "/admin/referents", icon: "i-lucide-shield-check" },
   { label: "Géographie", to: "/admin/geography", icon: "i-lucide-map-pin" },
+  { label: "Compétitions", to: "/admin/competitions", icon: "" },
 ];
 </script>
 
