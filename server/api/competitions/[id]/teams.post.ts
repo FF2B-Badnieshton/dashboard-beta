@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
     });
 
   try {
-    return await prisma.team.create({
+    return await prisma.teams.create({
       data: {
         competition_id: competitionId,
         name,

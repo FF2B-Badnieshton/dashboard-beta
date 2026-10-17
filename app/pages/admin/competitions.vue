@@ -116,7 +116,10 @@ const registeredParticipants = computed(
   () => detail.value?.competition_participant ?? [],
 );
 
-const teams = computed(() => detail.value?.team ?? []);
+// Le nom de la relation Prisma est `teams` (et non `team`).
+// Garder cette source unique permet aussi d'utiliser une équipe comme côté
+// de match, quelle que soit sa composition (1v1, 1v2, 2v2, etc.).
+const teams = computed(() => detail.value?.teams ?? []);
 const games = computed(() => detail.value?.games ?? []);
 
 const filteredCompetitions = computed(() => {
@@ -310,7 +313,7 @@ async function runAction(
   action: () => Promise<unknown>,
   successMessage: string,
   refreshDetail = true,
-) {
+): Promise<boolean> {
   busy.value = true;
   pageError.value = "";
   pageSuccess.value = "";
@@ -324,8 +327,10 @@ async function runAction(
     }
 
     showSuccess(successMessage);
+    return true;
   } catch (error: any) {
     showError(error);
+    return false;
   } finally {
     busy.value = false;
   }
@@ -368,7 +373,7 @@ async function createCompetition() {
 async function addParticipant() {
   if (!selectedCompetitionId.value) return;
 
-  await runAction(
+  const added = await runAction(
     () =>
       $fetch(`/api/competitions/${selectedCompetitionId.value}/participants`, {
         method: "POST",
@@ -381,18 +386,20 @@ async function addParticipant() {
     "Participant inscrit.",
   );
 
-  Object.assign(participantForm, {
-    person_id: "",
-    license_id: "",
-    status: "",
-    category: "",
-  });
+  if (added) {
+    Object.assign(participantForm, {
+      person_id: "",
+      license_id: "",
+      status: "",
+      category: "",
+    });
+  }
 }
 
 async function createTeam() {
   if (!selectedCompetitionId.value) return;
 
-  await runAction(
+  const created = await runAction(
     () =>
       $fetch(`/api/competitions/${selectedCompetitionId.value}/teams`, {
         method: "POST",
@@ -404,7 +411,9 @@ async function createTeam() {
     "Équipe créée.",
   );
 
-  Object.assign(teamForm, { name: "", person_ids: [] });
+  if (created) {
+    Object.assign(teamForm, { name: "", person_ids: [] });
+  }
 }
 
 function decodeSide(value: string) {
@@ -429,7 +438,7 @@ async function createGame() {
     return;
   }
 
-  await runAction(
+  const created = await runAction(
     () =>
       $fetch(`/api/competitions/${selectedCompetitionId.value}/games`, {
         method: "POST",
@@ -443,12 +452,14 @@ async function createGame() {
     "Match créé.",
   );
 
-  Object.assign(gameForm, {
-    date: new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16),
-    format_id: "",
-    side1: "",
-    side2: "",
-  });
+  if (created) {
+    Object.assign(gameForm, {
+      date: new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16),
+      format_id: "",
+      side1: "",
+      side2: "",
+    });
+  }
 }
 
 async function saveScore(gameId: number) {

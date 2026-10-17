@@ -91,7 +91,8 @@ export default defineEventHandler(async (event) => {
         ],
       };
     }
-    const team = await prisma.team.findFirst({
+    // Le delegate Prisma correspond au modèle `teams` du schéma.
+    const team = await prisma.teams.findFirst({
       where: { id: side.id as number, competition_id: competitionId },
       include: { team_members: { select: { person_id: true } } },
     });
@@ -157,6 +158,8 @@ export default defineEventHandler(async (event) => {
         data: {
           game_id: game.id,
           side_number: sideNumber,
+          person_id: resolved.personId,
+          team_id: resolved.teamId,
         },
       });
 

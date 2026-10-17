@@ -1,15 +1,15 @@
-import { prisma } from '../../utils/prisma'
+import { prisma } from "../../utils/prisma";
 
 export default defineEventHandler(async () => {
-  return prisma.practice_site.findMany({
-    orderBy: { name: 'asc' },
+  return prisma.practice_sites.findMany({
+    orderBy: { name: "asc" },
     include: {
       municipalities: {
         select: {
           id: true,
-          name: true
-        }
-      }
-    }
-  })
-})
+          name: true,
+        },
+      },
+    },
+  });
+});

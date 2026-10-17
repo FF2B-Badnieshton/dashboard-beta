@@ -13,6 +13,7 @@ const navigation = [
   { label: "Référents", to: "/admin/referents", icon: "i-lucide-shield-check" },
   { label: "Géographie", to: "/admin/geography", icon: "i-lucide-map-pin" },
   { label: "Compétitions", to: "/admin/competitions", icon: "" },
+  { label: "Classement ELO", to: "/admin/elo", icon: "i-lucide-chart-no-axes-combined" },
 ];
 </script>
 

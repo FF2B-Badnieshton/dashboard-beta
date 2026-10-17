@@ -60,52 +60,45 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // 1 = victoire, 0 = égalité, -1 = défaite.
-    const side1Result =
-      side1Scored > side2Scored ? 1 : side1Scored < side2Scored ? 3 : 2;
-
-    const side2Result =
-      side2Scored > side1Scored ? 1 : side2Scored < side1Scored ? 3 : 2;
-
     await tx.$executeRaw`
       INSERT INTO "game_side_result" (
         "game_side_id",
         "nieshs_scored",
-        "nieshs_conceded",
-        "result"
+        "nieshs_conceded"
       )
       VALUES (
         ${first.id},
         ${side1Scored},
-        ${side2Scored},
-        ${side1Result}
+        ${side2Scored}
       )
       ON CONFLICT ("game_side_id")
       DO UPDATE SET
         "nieshs_scored" = EXCLUDED."nieshs_scored",
-        "nieshs_conceded" = EXCLUDED."nieshs_conceded",
-        "result" = EXCLUDED."result"
+        "nieshs_conceded" = EXCLUDED."nieshs_conceded"
     `;
 
     await tx.$executeRaw`
       INSERT INTO "game_side_result" (
         "game_side_id",
         "nieshs_scored",
-        "nieshs_conceded",
-        "result"
+        "nieshs_conceded"
       )
       VALUES (
         ${second.id},
         ${side2Scored},
-        ${side1Scored},
-        ${side2Result}
+        ${side1Scored}
       )
       ON CONFLICT ("game_side_id")
       DO UPDATE SET
         "nieshs_scored" = EXCLUDED."nieshs_scored",
-        "nieshs_conceded" = EXCLUDED."nieshs_conceded",
-        "result" = EXCLUDED."result"
+        "nieshs_conceded" = EXCLUDED."nieshs_conceded"
     `;
+
+    // La colonne `result` est générée par PostgreSQL à partir des scores.
+    const side1Result =
+      side1Scored > side2Scored ? 1 : side1Scored < side2Scored ? 3 : 2;
+    const side2Result =
+      side2Scored > side1Scored ? 1 : side2Scored < side1Scored ? 3 : 2;
 
     return {
       gameId,

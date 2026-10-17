@@ -26,8 +26,8 @@ export default defineEventHandler(async (event) => {
   const [season, municipality, site, format, organizer] = await Promise.all([
     prisma.seasons.findUnique({ where: { id: seasonId } }),
     prisma.municipalities.findUnique({ where: { id: locationId } }),
-    prisma.practice_site.findUnique({ where: { id: siteId } }),
-    prisma.competition_format.findUnique({ where: { id: formatId } }),
+    prisma.practice_sites.findUnique({ where: { id: siteId } }),
+    prisma.competition_formats.findUnique({ where: { id: formatId } }),
     prisma.persons.findUnique({ where: { ff2b_id: organizerId } }),
   ])
   if (!season || !municipality || !site || !format || !organizer) throw createError({ statusCode: 400, statusMessage: 'Une des références sélectionnées n’existe plus.' })

@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
         orderBy: { id: "asc" },
       },
 
-      team: {
+      teams: {
         include: {
           team_members: {
             include: {
