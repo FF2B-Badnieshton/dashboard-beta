@@ -24,6 +24,16 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
 
+      - name: Synchronize Prisma schema
+        run: pnpm exec prisma db pull
+        env:
+          DATABASE_URL: ${{ secrets.PRISMA_DATABASE_URL }}
+
+      - name: Generate Prisma Client
+        run: pnpm exec prisma generate
+        env:
+          DATABASE_URL: ${{ secrets.PRISMA_DATABASE_URL }}
+
       - name: Build Nuxt frontend
         run: |
           pnpm run build
